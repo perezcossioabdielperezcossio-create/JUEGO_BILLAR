@@ -75,7 +75,7 @@ namespace QuestBilliards.CueInteraction
             for (int i = 0; i < count; i++)
             {
                 var ball = hits[i].collider.GetComponentInParent<BilliardBallBody>();
-                if (ball != null && ball.isCueBall && hits[i].distance < nearest)
+                if (ball != null && ball.isCueBall && !ball.IsPocketed && hits[i].distance < nearest)
                 { target = ball; nearest = hits[i].distance; }
             }
             // SphereCast does not report a collider that already overlaps its origin.
@@ -83,7 +83,7 @@ namespace QuestBilliards.CueInteraction
             Vector3 start = tip - movement;
             foreach (var ball in balls)
             {
-                if (ball == null || !ball.isCueBall) continue;
+                if (ball == null || !ball.isCueBall || ball.IsPocketed) continue;
                 var collider = ball.GetComponentInChildren<SphereCollider>();
                 if (collider == null || !collider.enabled) continue;
                 Vector3 center = collider.transform.TransformPoint(collider.center);

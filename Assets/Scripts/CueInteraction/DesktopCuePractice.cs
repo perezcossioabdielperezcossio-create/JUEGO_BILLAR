@@ -61,6 +61,7 @@ namespace QuestBilliards.CueInteraction
         private float stableTime;
         private CueTableConstraint tableConstraint;
         private CueStrikeController strike;
+        private int lastAimSession = -1;
         public int CompletedStrokes { get; private set; }
         private void Start()
         {
@@ -114,10 +115,19 @@ namespace QuestBilliards.CueInteraction
             bool primaryPressed = xrPrimary && !previousPrimary;
             bool triggerPressed = xrTrigger && !previousTrigger;
             previousPrimary = xrPrimary; previousTrigger = xrTrigger;
+            if (label != null) label.gameObject.SetActive(playerMode == null || !playerMode.ControlsLocked);
+            if (playerMode != null && playerMode.ControlsLocked) return;
             if (playerMode != null)
             {
                 if (playerMode.IsAiming != previousAimMode) SetActive(playerMode.IsAiming);
                 previousAimMode = playerMode.IsAiming;
+                if (playerMode.IsAiming && lastAimSession != playerMode.AimSessionVersion)
+                {
+                    Vector3 direction = playerMode.AimEntryDirection;
+                    yaw = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
+                    elevation = 8f; needsPreparation = true; stableTime = 0;
+                    lastAimSession = playerMode.AimSessionVersion;
+                }
                 if (keys != null && keys.f2Key.wasPressedThisFrame && playerMode.IsAiming) SetActive(!IsActive);
             }
             else if ((keys != null && keys.f2Key.wasPressedThisFrame) || primaryPressed) SetActive(!IsActive);

@@ -13,7 +13,18 @@ namespace QuestBilliards.CueInteraction
         private bool initialized;
         private CueGrabController grab;
         private DesktopCuePractice practice;
-        private void Awake() { grab = GetComponent<CueGrabController>(); practice = GetComponent<DesktopCuePractice>(); }
+        private void Awake() { grab = GetComponent<CueGrabController>(); practice = GetComponent<DesktopCuePractice>(); RefreshSolidObstacles(); }
+        public void RefreshSolidObstacles()
+        {
+            var solids = new System.Collections.Generic.List<Collider>();
+            foreach (var col in FindObjectsByType<Collider>(FindObjectsSortMode.None))
+            {
+                if (!col.enabled || col.isTrigger || col is CharacterController || col.transform.IsChildOf(transform)) continue;
+                if (col.GetComponentInParent<QuestBilliards.BallPhysics.BilliardBallBody>() != null || col.GetComponentInParent<QuestBilliards.Inputs.BilliardsPlayerMode>() != null) continue;
+                solids.Add(col);
+            }
+            tableColliders = solids.ToArray();
+        }
         private void FixedUpdate() { Constrain(); }
         private void LateUpdate() { Constrain(); }
         public bool TryPlaceAtRest(Vector3 position, Quaternion rotation)
@@ -30,9 +41,11 @@ namespace QuestBilliards.CueInteraction
         private bool Overlaps(Vector3 p, Quaternion q, out Vector3 correction)
         {
             correction = Vector3.zero; bool overlap = false;
+            var candidateBounds = new Bounds(p, Vector3.one * (cueShape.height + 0.05f));
             foreach (var col in tableColliders)
             {
                 if (col == null || !col.enabled) continue;
+                if (!candidateBounds.Intersects(col.bounds)) continue;
                 if (Physics.ComputePenetration(cueShape, p, q, col, col.transform.position, col.transform.rotation, out var direction, out var distance))
                 { overlap = true; correction += direction * (distance + 0.001f); }
             }

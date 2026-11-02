@@ -11,6 +11,10 @@ Prototipo de billar en Unity **6000.0.82f1**, con OpenXR, Meta XR All-in-One SDK
 
 Los SDK externos se restauran mediante Package Manager; no se distribuye la caché `Library`. Para compilar a Quest se necesita el módulo Android de Unity y validar la configuración XR de la plataforma.
 
+## Dificultad inicial
+
+Al iniciar aparece un menú con Fácil (troneras de 20 cm), Normal (16 cm) y Difícil (13 cm). Fácil está seleccionada por defecto. En el simulador se elige con Y/H y se confirma con T; en Game de Unity se puede usar 1, 2 o 3. El tamaño cambia también en la geometría y los colliders, manteniendo el paño plano.
+
 ## Controles
 
 ### Meta XR Simulator
@@ -37,10 +41,10 @@ Joystick izquierdo para desplazarse y X izquierdo para entrar o salir de apuntad
 - Mesa con seis troneras amplias de 20 cm, bandas y colliders.
 - Bolas numeradas: 1–8 lisas, 9–15 rayadas y blanca sin número.
 - Bolas de 130 g, física ajustable, estela y guía aproximada de trayectoria.
-- Apuntado horizontal y vertical, vista detrás de la blanca y preparación entre tiros.
+- Apuntado horizontal y vertical, rumbo inicial según la mirada, vista detrás de la blanca y preparación entre tiros.
 - Restricción del taco contra la mesa y aislamiento de las bolas respecto a manos, cuerpo y contacto del taco.
 - Impulso explícito a la blanca durante un golpe válido.
-- Retirada de bolas embocadas y reposición de la blanca en una posición libre.
+- Retirada de bolas embocadas; falta de la blanca con recolocación manual en un lugar libre.
 
 ## Estructura
 

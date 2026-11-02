@@ -72,3 +72,43 @@ Requiere ambos inputs configurados como Controller y runtime activo.
 - La guía de apuntado se corta al llegar a una tronera y excluye las bolas retiradas. La preparación se bloquea mientras la blanca está embocada.
 - Validación: seis rayos verticales pasan por los huecos y el centro del paño sigue sólido; 15 números únicos; dos capturas físicas registradas, retirada de la bola 1 y retorno de la blanca confirmados. Runtime: masa 0.13 kg.
 - No se han añadido todavía reglas completas de bola 8, turnos, victoria o puntuación.
+
+## Paño plano, dirección inicial y falta de la blanca
+- Medición del tablero: todos los vértices del paño tienen y=0.78 m, rotación de mesa 0/0/0 y gravedad vertical. No hay rampas ni inclinaciones a las troneras.
+- El detector de tronera ya no captura una bola al nivel del paño. La captura exige una caída real de al menos 4 mm desde la altura de reposo de la bola sobre el paño y revisa el segmento recorrido; el inicio de la caída es por gravedad.
+- Al pulsar X/B para entrar en apuntado se captura el rumbo horizontal actual del visor. El taco y la mira usan ese mismo rumbo. Al moverse y entrar desde otro lado se toma una nueva dirección; no se vuelve al +Z global ni al ángulo del primer tiro.
+- Verificación de direcciones: mirar a +90, -90 y 180 grados produjo esos mismos rumbos de taco, con error inferior a 0.00001 grados.
+- Embocar la blanca es falta: espera al reposo de otras bolas y entra en BOLA EN MANO, sin regresar automáticamente a la salida.
+- Para colocarla, apuntar el mando derecho a un lugar libre del paño. Si el rayo del mando no llega al paño, se usa la dirección de la mirada. Anillo verde: válido; rojo: inválido. Gatillo derecho/T confirma; en Game de Unity también Enter.
+- No se permite colocar encima de otra bola, fuera de la mesa ni cerca de una tronera. Después de colocar se prepara un nuevo tiro y se exige una nueva pulsación del gatillo para cargar; la confirmación no debe disparar.
+- Pruebas: captura bloqueada a la altura del paño; caída natural de la blanca; espera de colocación; rechazo de bola ocupada y tronera; aceptación de punto libre; retorno a estado jugable. No incluye cambios de turno ni reglas completas de bola 8.
+
+## Menú inicial y dificultad
+- Al iniciar Play aparece un menú pequeño con Fácil, Normal y Difícil. Fácil está seleccionada por defecto y conserva las troneras amplias anteriores.
+- Fácil: diámetro 20 cm; Normal: 16 cm; Difícil: 13 cm.
+- Solo cambia la apertura de las troneras: la geometría recortada del paño, los huecos entre bandas, los aros/interiores y los detectores de captura. No cambia masa ni fuerza de golpe.
+- Quest: joystick arriba/abajo para seleccionar y gatillo para confirmar.
+- Meta XR Simulator: Y/H para elegir y T para confirmar. Confirmar T sin cambiar la selección inicia Fácil.
+- Game de Unity: 1, 2 o 3 eligen e inician; Enter confirma la opción resaltada. También admite clic sobre los botones del menú con Game enfocado.
+- Desplazamiento y apuntado permanecen bloqueados hasta confirmar dificultad.
+- Pruebas en Play: selección inicial 0/Fácil y bloqueo activo; los seis detectores coinciden con cada radio; rayos al paño distinguen los tres huecos reales; superficie plana en las tres opciones.
+
+## Cuarto de billar
+- Escena BilliardsPrototype: cuarto interior de 7 x 8.5 m, con cuatro paredes de 3.2 m de altura y suelo horizontal a y=0.
+- Paredes con BoxCollider; suelo con BoxCollider. Se conservan espacio de movimiento alrededor de la mesa y altura de paño y=0.78.
+- Materiales RoomWall, RoomAccentWall, RoomFloor y RoomBaseboard.
+- Prefab compuesto Assets/Prefabs/BilliardsRoom.prefab. Modelos individuales de paredes y suelo en Assets/Models/Room.
+
+## Ambiente de bar
+- Techo con vigas y collider, barra con estantes y botellas, tres taburetes, tres lámparas colgantes, banco, mesita, taco decorativo en pared, cuadros, panel de puerta y alfombra.
+- 14 modelos base en Models/Bar, prefabs individuales en Prefabs/Bar y conjunto BarEnvironment.prefab.
+- Iluminación cálida: tres luces reales; solo la principal sobre la mesa utiliza sombras. Los cambios pequeños se explican en BAR_MODELS_README.md.
+
+## Contención de troneras y colisiones del ambiente
+- PocketTrigger comprueba también el segmento recorrido por cada bola en un paso de física. Captura cruces rápidos aunque no se reciba un evento de trigger a tiempo; no captura una bola que todavía está apoyada en el paño.
+- Cada dificultad genera paredes interiores y guardas en la cara exterior de las seis troneras. Se eliminan las contenciones anteriores al cambiar tamaño. En Fácil hay 120 piezas de contención activas, sin duplicados.
+- La animación de embocado dirige la bola hacia el centro interior de la tronera antes de retirarla. La blanca conserva la falta y recolocación manual.
+- Todos los elementos de malla sólidos del bar y el cuarto tienen collider; los textos son visuales. Los cambios se guardaron en 19 prefabs fuente de Models/Bar y Models/Room y en el prefab compuesto del cuarto.
+- Se añadieron cuatro patas al banco, soportes al estante y al reposapiés de la barra y se extendió la suspensión de las lámparas hasta el techo.
+- CueTableConstraint también considera los sólidos del cuarto y el mobiliario; sigue excluyendo jugador y bolas para conservar el aislamiento del apuntado.
+- Pruebas: 18 cruces de captura (6 troneras x 3 dificultades), entradas físicas a 3 m/s por lateral y esquina, cero bolas sueltas bajo la mesa, bloqueo real de CharacterController ante mesita y pared, banco apoyado en suelo y suspensión de lámparas en techo. Compilación correcta.

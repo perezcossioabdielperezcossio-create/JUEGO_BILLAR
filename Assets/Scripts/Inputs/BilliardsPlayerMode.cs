@@ -17,6 +17,9 @@ namespace QuestBilliards.Inputs
         public float aimViewAboveBall = 0.15f;
         public bool IsViewTransitioning { get; private set; }
         public bool IsAiming { get; private set; }
+        public bool ControlsLocked { get; set; }
+        public Vector3 AimEntryDirection { get; private set; } = Vector3.forward;
+        public int AimSessionVersion { get; private set; }
         private CharacterController body;
         private bool previousX;
         private TextMesh modeLabel;
@@ -47,9 +50,12 @@ namespace QuestBilliards.Inputs
             var keyboard = UnityEngine.InputSystem.Keyboard.current;
             x |= keyboard != null && keyboard.xKey.isPressed;
 #endif
+            if (modeLabel != null) modeLabel.gameObject.SetActive(!ControlsLocked);
+            if (ControlsLocked) { previousX = x; return; }
             if (x && !previousX)
             {
                 IsAiming = !IsAiming;
+                if (IsAiming) CaptureLookHeading();
                 SetViewTarget();
             }
             previousX = x;
@@ -85,7 +91,18 @@ namespace QuestBilliards.Inputs
         }
         private void SetViewTarget()
         {
-            ConfigureAimView(head != null ? head.forward : Vector3.forward);
+            ConfigureAimView(IsAiming ? AimEntryDirection : Vector3.forward);
+        }
+        private void CaptureLookHeading()
+        {
+            Vector3 direction = head != null ? Vector3.ProjectOnPlane(head.forward, Vector3.up) : transform.forward;
+            if (direction.sqrMagnitude > 0.01f) AimEntryDirection = direction.normalized;
+            AimSessionVersion++;
+        }
+        public void RefreshAimFromCurrentLook()
+        {
+            if (!IsAiming) return;
+            CaptureLookHeading(); SetViewTarget();
         }
         public void RefreshAimingView(Vector3 shotDirection)
         {
@@ -95,6 +112,8 @@ namespace QuestBilliards.Inputs
         {
             desiredTrackingPosition = baseTrackingPosition; desiredTrackingRotation = baseTrackingRotation;
             if (!IsAiming || trackingSpace == null || head == null || whiteBall == null) return;
+            var ball = whiteBall.GetComponent<QuestBilliards.BallPhysics.BilliardBallBody>();
+            if (ball != null && ball.IsPocketed) return;
             Vector3 direction = Vector3.ProjectOnPlane(shotDirection, Vector3.up).normalized;
             if (direction.sqrMagnitude < 0.5f) direction = Vector3.forward;
             Vector3 eye = whiteBall.position - direction * aimViewDistance + Vector3.up * aimViewAboveBall;
