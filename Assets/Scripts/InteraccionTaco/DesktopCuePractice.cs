@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 
 namespace QuestBilliards.CueInteraction
 {
-    // Editor training drives the cue, not the ball: impacts still use CueStrikeController.
+    // Control asistido compartido: mueve el taco; CueStrikeController resuelve el impacto.
     [DefaultExecutionOrder(-100)]
     [RequireComponent(typeof(CueGrabController), typeof(CueStrikeController))]
     public sealed class DesktopCuePractice : MonoBehaviour
@@ -17,28 +17,19 @@ namespace QuestBilliards.CueInteraction
         {
             get
             {
-#if UNITY_EDITOR
                 if (white == null) return false;
                 Vector3 tip = transform.position + transform.forward * 0.725f;
                 Vector3 delta = white.transform.position - tip;
                 return Vector3.Dot(delta, transform.forward) > 0 && delta.magnitude < 0.4f && Vector3.Cross(delta, transform.forward).magnitude < 0.003f;
-#else
-                return false;
-#endif
             }
         }
         public bool IsStrokeInProgress
         {
             get
             {
-#if UNITY_EDITOR
                 return IsActive && stroking;
-#else
-                return false;
-#endif
             }
         }
-#if UNITY_EDITOR
         private CueGrabController grab;
         private BilliardBallBody white;
         private BilliardBallBody[] balls;
@@ -51,12 +42,14 @@ namespace QuestBilliards.CueInteraction
         private TextMesh label;
         private QuestBilliards.Inputs.BilliardsInputDiagnostics diagnostics;
         private bool diagnosticsWasEnabled;
+#if UNITY_EDITOR
         private InputSettings.BackgroundBehavior previousBackground;
         private InputSettings.EditorInputBehaviorInPlayMode previousRouting;
         private bool savedInputSettings;
+#endif
         private bool previousPrimary, previousTrigger;
         private QuestBilliards.Inputs.BilliardsPlayerMode playerMode;
-        private bool previousAimMode;
+        private bool previousAimMode, previousSeatedMode;
         private bool needsPreparation;
         private float stableTime;
         private CueTableConstraint tableConstraint;
@@ -68,12 +61,14 @@ namespace QuestBilliards.CueInteraction
             grab = GetComponent<CueGrabController>();
             tableConstraint = GetComponent<CueTableConstraint>(); strike = GetComponent<CueStrikeController>();
             playerMode = grab.playerMode;
+#if UNITY_EDITOR
             previousBackground = InputSystem.settings.backgroundBehavior;
             previousRouting = InputSystem.settings.editorInputBehaviorInPlayMode;
             savedInputSettings = true;
             InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
             InputSystem.settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
             if (Keyboard.current != null) InputSystem.EnableDevice(Keyboard.current);
+#endif
             diagnostics = FindFirstObjectByType<QuestBilliards.Inputs.BilliardsInputDiagnostics>();
             diagnosticsWasEnabled = diagnostics != null && diagnostics.enabled;
             dockPosition = transform.position; dockRotation = transform.rotation;
@@ -109,17 +104,21 @@ namespace QuestBilliards.CueInteraction
         }
         private void Update()
         {
+#if UNITY_EDITOR
             var keys = Keyboard.current;
+#endif
             bool xrPrimary = grab.inputs != null && (grab.inputs.Left.PrimaryButton || grab.inputs.Right.PrimaryButton);
-            bool xrTrigger = grab.inputs != null && (grab.inputs.Left.Trigger || grab.inputs.Right.Trigger);
+            bool xrTrigger = grab.inputs != null && grab.inputs.Right.Connected && grab.inputs.Right.Trigger;
             bool primaryPressed = xrPrimary && !previousPrimary;
             bool triggerPressed = xrTrigger && !previousTrigger;
             previousPrimary = xrPrimary; previousTrigger = xrTrigger;
             if (label != null) label.gameObject.SetActive(playerMode == null || !playerMode.ControlsLocked);
-            if (playerMode != null && playerMode.ControlsLocked) return;
+            if (playerMode != null && playerMode.ControlsLocked) { CancelStroke(); return; }
+            bool assistedWanted = playerMode != null && playerMode.IsSeated;
             if (playerMode != null)
             {
-                if (playerMode.IsAiming != previousAimMode) SetActive(playerMode.IsAiming);
+                if (playerMode.IsAiming != previousAimMode || playerMode.IsSeated != previousSeatedMode) SetActive(playerMode.IsAiming && assistedWanted);
+                previousSeatedMode = playerMode.IsSeated;
                 previousAimMode = playerMode.IsAiming;
                 if (playerMode.IsAiming && lastAimSession != playerMode.AimSessionVersion)
                 {
@@ -128,22 +127,36 @@ namespace QuestBilliards.CueInteraction
                     elevation = 8f; needsPreparation = true; stableTime = 0;
                     lastAimSession = playerMode.AimSessionVersion;
                 }
+#if UNITY_EDITOR
                 if (keys != null && keys.f2Key.wasPressedThisFrame && playerMode.IsAiming) SetActive(!IsActive);
+#endif
             }
+#if UNITY_EDITOR
             else if ((keys != null && keys.f2Key.wasPressedThisFrame) || primaryPressed) SetActive(!IsActive);
+#endif
             // A real/simulated grip always gives the cue back to tracked hands.
             if (IsActive && grab.inputs != null)
             {
                 var dominant = grab.leftHandDominant ? grab.inputs.Left : grab.inputs.Right;
-                if (dominant.Tracked && dominant.Grip) SetActive(false);
+                if (dominant.Tracked && dominant.Grip && (playerMode == null || !playerMode.IsSeated)) SetActive(false);
             }
-            if (!IsActive) { if (label != null) label.text = playerMode != null ? "X izquierdo: movimiento / apuntado\nSIM: B equivale a X | F2: ayuda de golpe al apuntar" : "SIMULADOR: B activa practica (soltar U)\nUNITY: F2 activa practica"; return; }
+            if (IsActive && grab.inputs != null && !grab.inputs.Right.Connected) { CancelStroke(); aimAxis = elevationAxis = 0; return; }
+            if (!IsActive) { if (label != null) label.text = "X izquierdo: movimiento / apuntado\nB derecho: modo sentado / movimiento fisico"; return; }
             float stick = grab.inputs != null ? grab.inputs.Right.Stick.x : 0;
+#if UNITY_EDITOR
             float keyboardAim = keys != null ? (keys.lKey.isPressed ? 1 : 0) - (keys.jKey.isPressed ? 1 : 0) : 0;
+#else
+            float keyboardAim = 0;
+#endif
             aimAxis = Mathf.Abs(stick) > 0.15f ? stick : keyboardAim;
             float vertical = grab.inputs != null ? grab.inputs.Right.Stick.y : 0;
+#if UNITY_EDITOR
             float keyboardVertical = keys != null ? (keys.iKey.isPressed ? 1 : 0) - (keys.kKey.isPressed ? 1 : 0) : 0;
+#else
+            float keyboardVertical = 0;
+#endif
             elevationAxis = Mathf.Abs(vertical) > 0.15f ? vertical : keyboardVertical;
+#if UNITY_EDITOR
             if (keys != null && keys.backspaceKey.wasPressedThisFrame)
             {
                 foreach (var b in balls) if (b != null && b.Body != null) b.ResetBall();
@@ -152,10 +165,13 @@ namespace QuestBilliards.CueInteraction
             }
             bool spaceHeld = keys != null && keys.spaceKey.isPressed;
             bool spacePressed = keys != null && keys.spaceKey.wasPressedThisFrame;
+#else
+            bool spaceHeld = false, spacePressed = false;
+#endif
             if (!stroking && !needsPreparation && (spacePressed || triggerPressed) && BallsStopped() && (playerMode == null || !playerMode.IsViewTransitioning) && TryAlignRestPose(false)) { charging = true; charge = 0; }
             if (charging && !spaceHeld && !xrTrigger) { pendingRelease = true; charging = false; }
             Status = stroking ? "GOLPE" : charging ? $"FUERZA {charge / 0.22f:P0}" : !BallsStopped() ? "ESPERA A QUE PAREN LAS BOLAS" : needsPreparation || !IsAlignedWithWhite || playerMode != null && playerMode.IsViewTransitioning ? "ALINEANDO CON LA BLANCA" : "LISTO";
-            if (label != null) label.text = "PRACTICA: " + Status + $" | ANGULO {elevation:F0} grados\nSIM: G/J horizontal | Y/H vertical | T golpe\nUNITY: J/L horizontal | I/K vertical | ESPACIO";
+            if (label != null) label.text = "GOLPE ASISTIDO: " + Status + $" | ANGULO {elevation:F0} grados\nJoystick derecho: apuntar | Gatillo derecho: cargar y soltar";
         }
         private void FixedUpdate()
         {
@@ -168,10 +184,12 @@ namespace QuestBilliards.CueInteraction
                 if (stableTime >= 0.25f && TryAlignRestPose(true)) needsPreparation = false;
                 return;
             }
-            if (!stroking)
+            if (!stroking && !charging && !pendingRelease)
             {
                 yaw += aimAxis * 35f * Time.fixedDeltaTime;
                 elevation = Mathf.Clamp(elevation + elevationAxis * 20f * Time.fixedDeltaTime, 0, 75);
+                if ((Mathf.Abs(aimAxis) > 0.01f || Mathf.Abs(elevationAxis) > 0.01f) && BallsStopped())
+                { if (!TryAlignRestPose(true)) { needsPreparation = true; stableTime = 0; return; } }
             }
             if (charging) charge = Mathf.Min(0.22f, charge + Time.fixedDeltaTime * 0.18f);
             if (pendingRelease) { pendingRelease = false; stroking = true; strokeTime = 0; strokeCharge = charge; }
@@ -181,8 +199,8 @@ namespace QuestBilliards.CueInteraction
             if (stroking)
             {
                 strokeTime += Time.fixedDeltaTime;
-                behind = Mathf.Lerp(0.085f + strokeCharge, -0.045f, Mathf.Clamp01(strokeTime / 0.12f));
-                if (strokeTime >= 0.12f) { stroking = false; charge = 0; CompletedStrokes++; needsPreparation = true; stableTime = 0; }
+                behind = Mathf.Lerp(0.085f + strokeCharge, -0.045f, Mathf.Clamp01(strokeTime / Mathf.Lerp(0.45f, 0.12f, strokeCharge / 0.22f)));
+                if (strokeTime >= Mathf.Lerp(0.45f, 0.12f, strokeCharge / 0.22f)) { stroking = false; charge = 0; CompletedStrokes++; needsPreparation = true; stableTime = 0; }
             }
             if (!stroking && !charging && !pendingRelease && strokeTime == 0 && BallsStopped()) aimPoint = white.transform.position;
             if (charging) aimPoint = white.transform.position;
@@ -209,19 +227,26 @@ namespace QuestBilliards.CueInteraction
             }
             return false;
         }
+        private void CancelStroke()
+        {
+            charging = stroking = pendingRelease = false; charge = strokeTime = 0;
+            needsPreparation = true; stableTime = 0;
+            if (strike != null) strike.ResetStrokeHistory();
+        }
         private Vector3 aimPoint;
         private void OnDisable()
         {
             IsActive = false;
+#if UNITY_EDITOR
             if (savedInputSettings)
             {
                 InputSystem.settings.backgroundBehavior = previousBackground;
                 InputSystem.settings.editorInputBehaviorInPlayMode = previousRouting;
             }
+#endif
             if (diagnostics != null) diagnostics.enabled = diagnosticsWasEnabled;
             if (grab != null) { grab.enabled = true; if (grab.statusLabel != null) grab.statusLabel.gameObject.SetActive(true); }
             if (label != null) Destroy(label.gameObject);
         }
-#endif
     }
 }

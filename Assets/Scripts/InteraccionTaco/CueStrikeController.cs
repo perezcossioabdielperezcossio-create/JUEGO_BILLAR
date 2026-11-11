@@ -39,11 +39,9 @@ namespace QuestBilliards.CueInteraction
             Vector3 tip = transform.position + transform.forward * halfCueLength;
             bool held = grab.IsHeld;
             bool practiceActive = false;
-#if UNITY_EDITOR
             var practice = GetComponent<DesktopCuePractice>();
             practiceActive = practice != null && practice.IsActive;
             held = practiceActive ? practice.IsStrokeInProgress : held;
-#endif
             if (grab.playerMode != null && (!grab.playerMode.IsAiming || grab.playerMode.IsViewTransitioning)) held = false;
             var hand = grab.leftHandDominant ? grab.leftHand : grab.rightHand;
             Vector3 handPosition = hand != null ? hand.position : transform.position;

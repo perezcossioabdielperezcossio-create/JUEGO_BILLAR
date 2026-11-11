@@ -44,7 +44,7 @@ namespace QuestBilliards.GameRules
                 buttons[i]=go.GetComponent<Renderer>(); hitboxes[i]=go.GetComponent<Collider>();
                 Text(labels[i],new Vector3(0,y,-0.012f),0.011f,Color.white);
             }
-            Text("Joystick arriba/abajo: elegir | Gatillo: jugar\nSIM: Y/H y T | UNITY: 1, 2 o 3",new Vector3(0,-0.325f,-0.005f),0.007f,Color.white);
+            Text("Joystick arriba/abajo: elegir | Gatillo: jugar\nB derecho: alternar sentado / movimiento fisico",new Vector3(0,-0.325f,-0.005f),0.007f,Color.white);
             Highlight();
         }
         private GameObject Box(string name,Vector3 pos,Vector3 scale,Color color,bool collider)
