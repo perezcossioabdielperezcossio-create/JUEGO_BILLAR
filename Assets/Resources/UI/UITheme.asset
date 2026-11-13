@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b5697a2f67a94c839c470cbfe3de71d3, type: 3}
+  m_Name: UITheme
+  m_EditorClassIdentifier: 
+  panel: {r: 0.102, g: 0.078, b: 0.063, a: 0.97}
+  frame: {r: 0.722, g: 0.525, b: 0.043, a: 1}
+  button: {r: 0.19, g: 0.095, b: 0.045, a: 1}
+  buttonHover: {r: 0.278, g: 0.145, b: 0.059, a: 1}
+  buttonSelected: {r: 0.024, g: 0.22, b: 0.086, a: 1}
+  title: {r: 0.831, g: 0.686, b: 0.216, a: 1}
+  text: {r: 0.961, g: 0.961, b: 0.863, a: 1}
+  danger: {r: 0.545, g: 0.149, b: 0.208, a: 1}
+  titleFont: {fileID: 0}
+  bodyFont: {fileID: 0}
+  titleSize: 68
+  subtitleSize: 38
+  buttonSize: 36
+  captionSize: 26
+  menuBackingPrefab: {fileID: 919132149155446097, guid: 0fc2fe950db766e4e94dac7061f49de4, type: 3}
+  menuDistance: 1.1
+  canvasScale: 0.001
+  menuSize: {x: 900, y: 820}

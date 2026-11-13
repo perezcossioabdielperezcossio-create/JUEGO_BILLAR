@@ -26,8 +26,9 @@ Al detectar una pose válida del visor, se compensa el desplazamiento del área 
 
 ## Menú y falta de blanca
 
-- Dificultad: joystick arriba/abajo para elegir y gatillo para confirmar. Fácil: troneras de 20 cm; normal: 16 cm; difícil: 13 cm.
-- Blanca embocada: esperar a que se detengan las bolas, apuntar a un lugar libre del paño y pulsar el gatillo derecho para colocarla. Esa pulsación no inicia un golpe.
+- Dificultad: joystick arriba/abajo para elegir y gatillo para confirmar. Fácil: troneras de 17 cm; normal: 15 cm; difícil: 13 cm.
+- La blanca rebota al llegar a una tronera. Si cae fuera de la mesa, espera a que se detengan las bolas, apunta a un lugar libre del paño y pulsa el gatillo derecho para colocarla.
+- Las bolas de color pesan 90 g y la blanca pesa 130 g.
 
 ## Pruebas sin visor
 

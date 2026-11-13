@@ -35,8 +35,16 @@ namespace QuestBilliards.BallPhysics
         private void FixedUpdate()
         {
             if (!IsPocketed && pockets != null)
+            {
                 foreach (var pocket in pockets)
-                    if (pocket != null && pocket.TryCaptureMotion(this, previousPhysicsPosition, Body.position)) break;
+                {
+                    if (pocket == null) continue;
+                    bool handled = isCueBall
+                        ? pocket.TryReboundCueBall(this, previousPhysicsPosition, Body.position)
+                        : pocket.TryCaptureMotion(this, previousPhysicsPosition, Body.position);
+                    if (handled) break;
+                }
+            }
             previousPhysicsPosition = Body.position;
             if (!IsPocketed && Body.position.y < -1f)
             {
@@ -64,7 +72,7 @@ namespace QuestBilliards.BallPhysics
         {
             return BeginPocket(Body != null ? Body.position : transform.position);
         }
-        public bool TryPocketAt(Vector3 center) { return BeginPocket(center); }
+        public bool TryPocketAt(Vector3 center) { return !isCueBall && BeginPocket(center); }
         private bool BeginPocket(Vector3 center)
         {
             if (IsPocketed || Body == null) return false;

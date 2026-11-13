@@ -9,6 +9,8 @@ public static class QuestBilliardsBuild
     public static void BuildQuestApk()
     {
         var scene = "Assets/Scenes/BilliardsPrototype.unity";
+        if (Application.isBatchMode)
+            UnityEditor.SceneManagement.EditorSceneManager.OpenScene(scene);
         ValidateStartup(scene);
         EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(scene, true) };
         PlayerSettings.companyName = "BilliardsVR";

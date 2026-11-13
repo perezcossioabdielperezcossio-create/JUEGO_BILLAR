@@ -1,0 +1,20 @@
+{
+  "name": "QuestBilliards",
+  "rootNamespace": "QuestBilliards",
+  "references": [
+    "Unity.InputSystem",
+    "Unity.TextMeshPro",
+    "Unity.UGUI",
+    "Unity.XR.Interaction.Toolkit",
+    "Oculus.VR"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

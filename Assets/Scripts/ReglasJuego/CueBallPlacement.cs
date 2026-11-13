@@ -71,7 +71,7 @@ namespace QuestBilliards.GameRules
             confirm |= Keyboard.current != null && Keyboard.current.enterKey.wasPressedThisFrame;
 #endif
             bool scratch = whiteBall != null && whiteBall.IsPocketed;
-            if (label != null) label.gameObject.SetActive(scratch);
+            if (label != null) label.gameObject.SetActive(scratch && (mode == null || !mode.ControlsLocked));
             ring.enabled = rayLine.enabled = false; HasValidPlacement = false;
             if (!scratch) return;
             if (!whiteBall.NeedsPlacement) { if (label != null) label.text = "FALTA: BLANCA EMBOCADA\nEspera a que se detengan las bolas"; return; }

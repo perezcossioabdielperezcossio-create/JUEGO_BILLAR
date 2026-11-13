@@ -1,5 +1,8 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 using QuestBilliards.Inputs;
+using QuestBilliards.UI;
 #if UNITY_EDITOR
 using UnityEngine.InputSystem;
 #endif
@@ -7,101 +10,144 @@ using UnityEngine.InputSystem;
 namespace QuestBilliards.GameRules
 {
     [DefaultExecutionOrder(-300)]
-    public sealed class DifficultyMenu : MonoBehaviour
+    public sealed class DifficultyMenu : MenuBase
     {
         public BilliardsPlayerMode playerMode;
         public BilliardsInputReader inputs;
         public Transform head;
         public PocketDifficultyController table;
         public Material panelMaterial;
+        public UITheme theme;
         public bool IsChoosing { get; private set; } = true;
         public int SelectedIndex { get; private set; }
         private GameObject panel;
-        private readonly Renderer[] buttons = new Renderer[3];
-        private readonly Collider[] hitboxes = new Collider[3];
+        private readonly UnityEngine.UI.Button[] buttons = new UnityEngine.UI.Button[3];
         private bool previousTrigger;
         private bool navigationHeld;
-        private GameObject cueStatus;
-        private readonly string[] labels = { "FACIL  -  troneras de 20 cm", "NORMAL  -  troneras de 16 cm", "DIFICIL  -  troneras de 13 cm" };
+        private readonly string[] labels = { "FACIL  -  troneras de 17 cm", "NORMAL  -  troneras de 15 cm", "DIFICIL  -  troneras de 13 cm" };
+
         private void Awake()
         {
             Application.runInBackground = true;
-            if (playerMode != null) playerMode.ControlsLocked = true;
-            var grab = FindFirstObjectByType<QuestBilliards.CueInteraction.CueGrabController>();
-            if (grab != null && grab.statusLabel != null) { cueStatus = grab.statusLabel.gameObject; cueStatus.SetActive(false); }
+            if (theme == null) theme = Resources.Load<UITheme>("UI/UITheme");
+            if (theme == null) theme = ScriptableObject.CreateInstance<UITheme>();
+            Open(MenuManager.GetOrCreate(playerMode));
         }
+
         private void Start()
         {
-            if (playerMode != null) playerMode.ControlsLocked = true;
-            panel = new GameObject("DifficultySelection"); panel.transform.SetParent(head, false); panel.transform.localPosition = new Vector3(0,0,1.1f);
-            Box("Background", new Vector3(0,0,0.035f), new Vector3(0.85f,0.77f,0.015f), new Color(0.025f,0.04f,0.07f), false);
-            Text("BILLAR VR", new Vector3(0,0.29f,-0.005f), 0.018f, Color.white);
-            Text("Elige la dificultad", new Vector3(0,0.20f,-0.005f), 0.012f, Color.white);
-            for (int i=0;i<3;i++)
-            {
-                float y=0.07f-i*0.135f;
-                var go=Box("Difficulty_"+i,new Vector3(0,y,0),new Vector3(0.74f,0.105f,0.012f),Color.gray,true);
-                buttons[i]=go.GetComponent<Renderer>(); hitboxes[i]=go.GetComponent<Collider>();
-                Text(labels[i],new Vector3(0,y,-0.012f),0.011f,Color.white);
-            }
-            Text("Joystick arriba/abajo: elegir | Gatillo: jugar\nB derecho: alternar sentado / movimiento fisico",new Vector3(0,-0.325f,-0.005f),0.007f,Color.white);
+            BuildMenu();
             Highlight();
         }
-        private GameObject Box(string name,Vector3 pos,Vector3 scale,Color color,bool collider)
+
+        private void BuildMenu()
         {
-            var go=GameObject.CreatePrimitive(PrimitiveType.Cube);go.name=name;go.transform.SetParent(panel.transform,false);go.transform.localPosition=pos;go.transform.localScale=scale;
-            var mat=new Material(panelMaterial);mat.color=color;go.GetComponent<Renderer>().sharedMaterial=mat;
-            if(collider)go.GetComponent<Collider>().isTrigger=true;else Destroy(go.GetComponent<Collider>());
-            return go;
+            var canvas = WorldSpaceUIHelper.CreateMenuCanvas("DifficultySelection", head, theme);
+            panel = canvas.gameObject;
+            Transform contentParent = panel.transform;
+            if (theme.menuBackingPrefab == null)
+            {
+                var frame = WorldSpaceUIHelper.CreateImage(panel.transform, "BrassFrame", theme.frame);
+                WorldSpaceUIHelper.Stretch(frame.rectTransform);
+                var background = WorldSpaceUIHelper.CreateImage(frame.transform, "WalnutPanel", theme.panel);
+                WorldSpaceUIHelper.Stretch(background.rectTransform, 10f);
+                contentParent = background.transform;
+            }
+
+            var content = new GameObject("Content", typeof(RectTransform), typeof(VerticalLayoutGroup));
+            content.transform.SetParent(contentParent, false);
+            var contentRect = (RectTransform)content.transform;
+            contentRect.anchorMin = Vector2.zero;
+            contentRect.anchorMax = Vector2.one;
+            contentRect.offsetMin = new Vector2(48f, 38f);
+            contentRect.offsetMax = new Vector2(-48f, -38f);
+            var layout = content.GetComponent<VerticalLayoutGroup>();
+            layout.spacing = 16f;
+            layout.childAlignment = TextAnchor.UpperCenter;
+            layout.childControlWidth = true;
+            layout.childControlHeight = false;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+
+            AddText(content.transform, "Title", "BILLAR VR", theme.titleSize, theme.title, 90f, true);
+            AddText(content.transform, "Subtitle", "Elige la dificultad", theme.subtitleSize, theme.text, 60f, false);
+            for (int i = 0; i < buttons.Length; i++)
+            {
+                int index = i;
+                buttons[i] = WorldSpaceUIHelper.CreateButton(content.transform, "Difficulty_" + i, labels[i], theme,
+                    () => Choose((BilliardsDifficulty)index));
+                buttons[i].gameObject.AddComponent<LayoutElement>().preferredHeight = 104f;
+            }
+            AddText(content.transform, "Help", "Joystick arriba/abajo: elegir | Gatillo: jugar\nB derecho: sentado / movimiento fisico\nSIM: Y/H y T  |  UNITY: 1, 2 o 3", theme.captionSize, theme.text, 110f, false);
         }
-        private void Text(string value,Vector3 pos,float size,Color color)
+
+        private void AddText(Transform parent, string name, string value, float size, Color color, float height, bool title)
         {
-            var go=new GameObject(value);go.transform.SetParent(panel.transform,false);go.transform.localPosition=pos;
-            var text=go.AddComponent<TextMesh>();text.text=value;text.anchor=TextAnchor.MiddleCenter;text.alignment=TextAlignment.Center;text.characterSize=size;text.fontSize=48;text.color=color;
+            var text = WorldSpaceUIHelper.CreateText(parent, name, value, size, color, title ? theme.titleFont : theme.bodyFont);
+            text.gameObject.AddComponent<LayoutElement>().preferredHeight = height;
         }
+
         private void Highlight()
         {
-            for(int i=0;i<3;i++)if(buttons[i]!=null)buttons[i].sharedMaterial.color=i==SelectedIndex?new Color(0.02f,0.42f,0.23f):new Color(0.09f,0.14f,0.23f);
+            for (int i = 0; i < buttons.Length; i++)
+            {
+                if (buttons[i] == null) continue;
+                var colors = buttons[i].colors;
+                colors.normalColor = i == SelectedIndex ? theme.buttonSelected : theme.button;
+                buttons[i].colors = colors;
+            }
+            if (EventSystem.current != null && buttons[SelectedIndex] != null)
+                EventSystem.current.SetSelectedGameObject(buttons[SelectedIndex].gameObject);
         }
+
         public void Choose(BilliardsDifficulty level)
         {
-            if(!IsChoosing)return;
-            table.Apply(level);SelectedIndex=(int)level;IsChoosing=false;
-            if(panel!=null)panel.SetActive(false);
-            playerMode.ControlsLocked=false;
-            if(cueStatus!=null)cueStatus.SetActive(true);
+            if (!IsChoosing) return;
+            table.Apply(level);
+            SelectedIndex = (int)level;
+            IsChoosing = false;
+            Close();
         }
+
+        protected override void OnMenuVisibilityChanged(bool visible)
+        {
+            if (visible)
+            {
+                previousTrigger = true;
+                navigationHeld = true;
+            }
+            if (panel != null) panel.SetActive(visible);
+        }
+
+        protected override void OnDestroy()
+        {
+            base.OnDestroy();
+            if (panel != null) Destroy(panel);
+        }
+
         private void Update()
         {
-            if(!IsChoosing)return;
-            if (playerMode != null) playerMode.ControlsLocked = true;
-            if(cueStatus!=null)cueStatus.SetActive(false);
-            bool trigger=inputs!=null&&(inputs.Right.Trigger||inputs.Left.Trigger);
-            float axis=inputs!=null?inputs.Right.Stick.y+inputs.Left.Stick.y:0;
-            if(Mathf.Abs(axis)>0.5f&&!navigationHeld){SelectedIndex=(SelectedIndex+(axis>0?-1:1)+3)%3;Highlight();}
-            navigationHeld=Mathf.Abs(axis)>0.25f;
-#if UNITY_EDITOR
-            var keys=Keyboard.current;
-            if(keys!=null)
+            if (!IsChoosing || !IsOpen) return;
+            bool trigger = inputs != null && (inputs.Right.Trigger || inputs.Left.Trigger);
+            float axis = inputs != null ? inputs.Right.Stick.y + inputs.Left.Stick.y : 0f;
+            if (Mathf.Abs(axis) > 0.5f && !navigationHeld)
             {
-                if(keys.digit1Key.wasPressedThisFrame){Choose(BilliardsDifficulty.Easy);return;}
-                if(keys.digit2Key.wasPressedThisFrame){Choose(BilliardsDifficulty.Normal);return;}
-                if(keys.digit3Key.wasPressedThisFrame){Choose(BilliardsDifficulty.Hard);return;}
-                if(keys.enterKey.wasPressedThisFrame){Choose((BilliardsDifficulty)SelectedIndex);return;}
+                SelectedIndex = (SelectedIndex + (axis > 0f ? -1 : 1) + buttons.Length) % buttons.Length;
+                Highlight();
             }
-            if(Mouse.current!=null&&Mouse.current.leftButton.wasPressedThisFrame&&Camera.main!=null)
+            navigationHeld = Mathf.Abs(axis) > 0.25f;
+#if UNITY_EDITOR
+            var keys = Keyboard.current;
+            if (keys != null)
             {
-                Ray ray=Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
-                for(int i=0;i<3;i++)if(hitboxes[i]!=null&&hitboxes[i].Raycast(ray,out _,8f)){Choose((BilliardsDifficulty)i);return;}
+                if (keys.digit1Key.wasPressedThisFrame) { Choose(BilliardsDifficulty.Easy); return; }
+                if (keys.digit2Key.wasPressedThisFrame) { Choose(BilliardsDifficulty.Normal); return; }
+                if (keys.digit3Key.wasPressedThisFrame) { Choose(BilliardsDifficulty.Hard); return; }
+                if (keys.enterKey.wasPressedThisFrame) { Choose((BilliardsDifficulty)SelectedIndex); return; }
             }
 #endif
-            if(trigger&&!previousTrigger)Choose((BilliardsDifficulty)SelectedIndex);
-            previousTrigger=trigger;
-        }
-        private void OnDestroy()
-        {
-            if(playerMode!=null)playerMode.ControlsLocked=false;
-            if(panel!=null){foreach(var r in panel.GetComponentsInChildren<Renderer>(true))if(r is MeshRenderer&&r.gameObject.name!="BILLAR VR"&&r.GetComponent<TextMesh>()==null)Destroy(r.sharedMaterial);Destroy(panel);}
+            if (trigger && !previousTrigger) Choose((BilliardsDifficulty)SelectedIndex);
+            previousTrigger = trigger;
         }
     }
 }

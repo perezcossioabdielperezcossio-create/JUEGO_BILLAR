@@ -68,13 +68,11 @@ namespace QuestBilliards.BallPhysics
             }
             foreach (var pocket in pockets)
             {
-                Vector3 delta = Vector3.ProjectOnPlane(pocket.transform.position - start, Vector3.up);
-                float projection = Vector3.Dot(delta, dir);
-                float perpendicular = delta.sqrMagnitude - projection * projection;
-                float radius = pocket.openingRadius;
-                if (projection <= 0 || perpendicular > radius * radius) continue;
-                float entry = projection - Mathf.Sqrt(Mathf.Max(0, radius * radius - perpendicular));
-                if (entry >= 0 && entry < distance) { distance = entry; hitBall = true; }
+                if (!pocket.TryGetCueRebound(start, dir, distance, out float entry, out Vector3 reboundNormal)) continue;
+                if (entry >= distance) continue;
+                distance = entry;
+                normal = reboundNormal;
+                hitBall = false;
             }
             return distance;
         }
